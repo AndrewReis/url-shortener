@@ -1,111 +1,201 @@
-# END-POINTS
-## POST 
-Request
-api/v1/shorten
-Body: {"url": "www.exmple.com..."}
+# Encurtador de URLs — Documentação Técnica
 
-Response
-Status Code 201
-{ "short_url": "bit.ly/zn9e10A" }
+## API
 
-## GET
-Response
-api/v1/shorten
-Status Code 300/301
-{ long_url: 'www.example.com...' }
+### Criar URL encurtada
 
-# Requisitos Funcionais
-* Encutamento de URL: dado um URL longo
+**POST** `/api/v1/shorten`
 
-# Requisitos não funcionais
-* O sistema deve suportar 100 milhões de URLs geradas por dia
-* O tamanho da URL encurtada deve ser o mais curto possível
-* Somente números (0-9) e caracteres (az, AZ) são permitidos na URL
-* Para cada 1 operação de gravação no banco de dados, haverão 10 operações de leitura
-* O comprimento medio das URLs armazenadas é de 100 bytes
-* URLs devem ser armazenadas pelo periodo minimo de 10 anos
-* O sistema deve operar em modo de alta disponibilidade (24/7)
+**Request**
 
+```json
+{ "url": "https://www.example.com/..." }
+```
 
-# Calculos de estimativas:
-## Operações de gravação
-RnF: O sistema deve suportar 100 milhões de URLs geradas por dia
+**Response — 201**
 
-100 milhões por dia
+```json
+{ "short_url": "https://bit.ly/zn9e10A" }
+```
 
-**Calculos**:
-Valor de 24 horas em segundos: 24 / 60 / 60 = 0.0066
-Quantidade de requisições por segundo: 100.000.000 / 0.0066 = 1157
+---
 
-## Operações de leitura
-RnF: Para cada 1 operação de gravação no banco de dados, haverão 10 operações de leitura
-10 operações de leitura por gravação
+### Redirecionar URL
 
-**Calculos**:
-Quantidade de leituras por segundo: 1157 * 10 = 11.570
+**GET** `/api/v1/shorten/{code}`
 
-## Tempo de armazenamento das URLs
-RnF: URLs devem ser armazenadas pelo periodo minimo de 10 anos
-10 anos de armazenamento de URLs na base de dados
+**Response**
 
-**Calculos**:
-Quantidade de URLs armazenadas: 100.000.000 * 365 * 10 = 365 bilhões de registros
+* `301` ou `302`
+* Redireciona para a URL original
 
-## Capacidade de armazenamento
-RnF: O comprimento medio das URLs armazenadas é de 100 bytes
-cada URL deve ocupar até 100 bytes no armazenamento
+---
 
-**Calculos**:
-Capacidade de armazenamento: 365.000.000.000 * 100 = 36.5Tb
+## Requisitos Funcionais
 
-# Banco de dados
-RnF: O sistema deve operar em modo de alta disponibilidade (24/7)
+* Gerar URL encurtada a partir de uma URL longa
+* Redirecionar URL encurtada para a URL original
 
-## Cassandra
-dados:
-shortcode
-long_url
-created_at
+---
 
+## Requisitos Não Funcionais
 
+* Suportar **100 milhões de URLs/dia**
+* Alta disponibilidade (**24/7**)
+* Relação **1 write : 10 reads**
+* URLs armazenadas por **mínimo de 10 anos**
+* URL curta com **menor comprimento possível**
+* Charset permitido: `[0-9][a-z][A-Z]` (Base62)
+* Tamanho médio da URL longa: **100 bytes**
 
+---
 
-# Calculo tamanho da URL
-Rnf: 
-* O tamanho da URL encurtada deve ser o mais curto possível
-* Somente números (0-9) e caracteres (az, AZ) são permitidos na URL
+## Estimativas de Carga
 
-10 digitos numericos: 0-9
-26 letras minusculas: a-z
-26 letras maiusculas: A-Z
-**total: 62 caracteres** ou **base62**
+### Escritas
 
-## Calcular possíbilidades de combinações
-Quantidade de caracteres que a URL encurtada precisa usar
+* 100.000.000 URLs/dia
+* 86.400 segundos/dia
 
-|qtdCaracteres | número máximo de URLs          |
-|1             | 62 ^ 1 = 62                    |
-|2             | 62 ^ 2 = 3.844                 |
-|3             | 62 ^ 3 = 238.328               |
-|4             | 62 ^ 4 = 14.776,336            |
-|5             | 62 ^ 5 = 916.132,832           |
-|6             | 62 ^ 6 = 56.800.235.584        |
-|7             | **62 ^ 7 = 3.521.614.606.208** |
+```
+Writes/s ≈ 100.000.000 / 86.400 ≈ 1.157
+```
 
-## Escolher função de HASH
-**Conversão de base 62**
-Exemplo:
-Para representar o número 11157 na base 62, basta dividi-lo por 62 e usar o resto da divisão
-62 / 11157 = 179 (resto 59) 59 = x
-62 / 179 = 2 (resto 55) = 55 = t
-62 / 2 = 0 (resto 2) 2 = 2
+---
 
-**Exemplo final: https://bit.ly/2tx**
+### Leituras
 
-# Segurança
-**Encriptrar URL encurtada**
-Essa estrategia garante que mesmo que as URLs sejam salvas de forma incremental na base de dados, alguem mal intensionado não consiga encontrar o padrão de geração.
+* 10 leituras por escrita
 
-# System design
-![alt text](image.png)
-USERS -> LOAD BALANCER -> WEB SERVER (redis - cluster mode INCR Counter) -> DATABASE
+```
+Reads/s ≈ 11.570
+```
+
+---
+
+## Estimativa de Armazenamento
+
+### Volume de dados
+
+* 100M URLs/dia
+* Retenção: 10 anos
+
+```
+Total URLs = 100.000.000 × 365 × 10
+≈ 365 bilhões de registros
+```
+
+---
+
+### Capacidade
+
+* 100 bytes por URL
+
+```
+365B × 100 bytes ≈ 36,5 TB
+```
+
+*(sem considerar índices e metadados)*
+
+---
+
+## Banco de Dados
+
+### Requisitos
+
+* Escrita massiva
+* Leitura intensiva
+* Alta disponibilidade
+* Escala horizontal
+
+### Escolha
+
+**Apache Cassandra**
+
+**Modelo**
+
+* `short_code` (PK)
+* `long_url`
+* `created_at`
+
+Motivo: throughput alto, replicação nativa, retenção longa.
+
+---
+
+## Design do Short Code
+
+### Charset
+
+* 10 números
+* 26 letras minúsculas
+* 26 letras maiúsculas
+
+**Total:** 62 caracteres → **Base62**
+
+---
+
+### Capacidade por comprimento
+
+| Caracteres | Combinações      |
+| ---------- | ---------------- |
+| 5          | 916 milhões      |
+| 6          | 56,8 bilhões     |
+| 7          | **3,5 trilhões** |
+
+➡️ **7 caracteres** suportam crescimento com folga.
+
+---
+
+## Geração do Código
+
+### Estratégia
+
+* Contador incremental global
+* Conversão do ID para Base62
+
+Exemplo conceitual:
+
+```
+ID numérico → Base62 → short_code
+```
+
+Resultado:
+
+```
+https://bit.ly/2tx
+```
+
+---
+
+## Segurança
+
+### Ofuscação
+
+* O ID sequencial **não deve ser exposto diretamente**
+* Aplicar:
+
+  * Permutação
+  * Encoding
+  * Chave secreta
+
+Objetivo: evitar enumeração previsível de URLs.
+
+---
+
+## Arquitetura (Alto Nível)
+
+```
+Usuários
+   ↓
+Load Balancer
+   ↓
+Web Servers (stateless)
+   ↓
+Redis (INCR global / cache)
+   ↓
+Cassandra
+```
+
+* Redis: geração de IDs + cache de leitura
+* Banco acessado apenas em cache miss
+* API externa não necessária em runtime
