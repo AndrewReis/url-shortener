@@ -112,6 +112,39 @@ Total URLs = 100.000.000 × 365 × 10
 
 **Apache Cassandra**
 
+### Comandos:
+``` bash
+docker exec -it cassandra cqlsh
+```
+
+**READ ALL**
+```bash 
+SELECT * FROM url_shortener.urls;
+``` 
+
+**CREATE (insert)**
+```bash 
+INSERT INTO url_shortener.urls (short, original, created_at)
+VALUES ('2tx', 'https://example.com', toTimestamp(now()));
+``` 
+
+**READ (select)**
+```bash 
+SELECT * FROM url_shortener.urls WHERE short = '2tx';
+``` 
+
+**UPDATE**
+```bash 
+UPDATE url_shortener.urls
+SET original = 'https://example.org'
+WHERE short = '2tx';
+``` 
+
+**DELETE**
+```bash 
+DELETE FROM url_shortener.urls WHERE short = '2tx';
+``` 
+
 **Modelo**
 
 * `short_code` (PK)
@@ -199,3 +232,8 @@ Cassandra
 * Redis: geração de IDs + cache de leitura
 * Banco acessado apenas em cache miss
 * API externa não necessária em runtime
+
+# Testes
+curl -X POST -H "Content-Type: application/json" -d '{"url": "https://github.com/AndrewReis"}' http://localhost:3000/api/v1/shorten && echo
+
+curl -s http://localhost:3000/api/v1/shorten/7e20ABk && echo

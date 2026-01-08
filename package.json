@@ -14,11 +14,11 @@
     "url": "git+https://github.com/AndrewReis/url-shortener.git"
   },
   "scripts": {
-    "dev": "tsx watch src/index.mts",
+    "dev": "tsx watch src/server.mts",
     "docker:down": "docker compose down",
     "docker:up": "docker compose up -d",
     "docker:up-no-cache": "docker compose down && docker compose build --no-cache && docker compose up -d",
-    "test:debug": "echo \"Error: no test specified\" && exit 1"
+    "test:debug": "vitest run --config ./vitest.config.mts"
   },
   "keywords": [],
   "author": "AndrewReis",
@@ -29,11 +29,17 @@
     "cassandra-driver": "^4.8.0",
     "dotenv": "^17.2.3",
     "fastify": "^5.6.2",
+    "fastify-plugin": "^5.1.0",
     "hashids": "^2.3.0",
-    "redis": "^5.10.0"
+    "redis": "^5.10.0",
+    "tsyringe": "^4.10.0"
   },
   "devDependencies": {
     "@types/node": "^25.0.3",
-    "tsx": "^4.21.0"
+    "@types/supertest": "^6.0.3",
+    "reflect-metadata": "^0.2.2",
+    "supertest": "^7.2.2",
+    "tsx": "^4.21.0",
+    "vitest": "^4.0.16"
   }
 }

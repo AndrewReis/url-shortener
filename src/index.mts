@@ -1,52 +1,38 @@
 import 'dotenv/config';
-import fastify from "fastify";
+import "reflect-metadata";
 
+import fastify from "fastify";
 import Hashids from 'hashids';
-import { createClient } from 'redis';
-import cassandra from 'cassandra-driver';
+
+import { redisClient }     from './services/redis.mts';
+import { cassandraClient } from './services/cassandra.mts';
 
 const app = fastify({ logger: process.env.LOGGER === "true" });
 
-const redisClient = createClient({ url: 'redis://redis:6379' });
-const cassandraClient = new cassandra.Client({
-  contactPoints: ['cassandra'],
-  localDataCenter: 'datacenter1',
-  keyspace: 'url_shortener'
-});
-
 const basePath = "/api/v1";
-
 
 app.post(`${basePath}/shorten`, async (request, reply) => {
   const { url } = request.body as { url: string };
 
-  const globalId = await redisClient.incr('global:url_id');
-  const hashids = new Hashids('teste', 7, '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz');
+  const hashids = new Hashids(process.env.HASH_SECRET, 7, '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz');
 
-  const encode = hashids.encode(Number(globalId));
+  const id = await redisClient.incr(process.env.REDIS_INCR_KEY);
+  const encode = hashids.encode(Number(id));
 
-  const query = 'INSERT INTO urls (short_url, long_url, created_at) VALUES (?, ?, ?)';
-  const response = await cassandraClient.execute(query, [encode, url, new Date()]);
+  const query = 'INSERT INTO urls (short, original, created_at) VALUES (?, ?, ?)';
 
-  return { response };
+  const response = await cassandraClient.execute(query, [encode, url, new Date().toISOString()], { prepare: true });
+
+  return reply.status(201).send({ response });
 });
 
-app.get(`${basePath}/shorten`, async (request, reply) => {
-  return { shortUrl: '' };
+app.get(`${basePath}/shorten/:shortUrl`, async (request, reply) => {
+  const { shortUrl } = request.params as { shortUrl: string };
+  
+  const query = 'SELECT original FROM urls WHERE short = ? LIMIT 1';
+  const response = await cassandraClient.execute(query, [shortUrl], { prepare: true });
+
+  return { original: response.rows[0].original };
 });
 
-const start = async () => {
-  try {
-    await redisClient.connect();
-    await app.listen({
-      port: Number(process.env.PORT) || 3000,
-      host: '0.0.0.0'
-    });
-    console.log(`Server is running on http://localhost:${process.env.PORT}`);
-  } catch (err) {
-    app.log.error(err);
-    process.exit(1);
-  }
-};
-
-start();
+export { app };
