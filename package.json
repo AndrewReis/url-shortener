@@ -1,0 +1,39 @@
+{
+  "name": "url-shortener",
+  "version": "1.0.0",
+  "description": "**POST** `/api/v1/shorten`",
+  "main": "index.js",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/AndrewReis/url-shortener/issues"
+  },
+  "homepage": "https://github.com/AndrewReis/url-shortener#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AndrewReis/url-shortener.git"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.mts",
+    "docker:down": "docker compose down",
+    "docker:up": "docker compose up -d",
+    "docker:up-no-cache": "docker compose down && docker compose build --no-cache && docker compose up -d",
+    "test:debug": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "AndrewReis",
+  "engines": {
+    "node": "24.12.0"
+  },
+  "dependencies": {
+    "cassandra-driver": "^4.8.0",
+    "dotenv": "^17.2.3",
+    "fastify": "^5.6.2",
+    "hashids": "^2.3.0",
+    "redis": "^5.10.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.3",
+    "tsx": "^4.21.0"
+  }
+}
