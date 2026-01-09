@@ -9,10 +9,16 @@ import { cassandraClient } from './services/cassandra.mts';
 
 const app = fastify({ logger: process.env.LOGGER === "true" });
 
-const basePath = "/api/v1";
+const basePath = "api/v1";
 
-app.post(`${basePath}/shorten`, async (request, reply) => {
+app.post(`/${basePath}/shorten`, async (request, reply) => {
   const { url } = request.body as { url: string };
+
+  const cacheResponse = await redisClient.get(`shortURL:${url}`);
+
+  if (cacheResponse) {
+    return reply.status(201).send({ shortUrl: cacheResponse });
+  }
 
   const hashids = new Hashids(process.env.HASH_SECRET, 7, '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz');
 
@@ -21,18 +27,20 @@ app.post(`${basePath}/shorten`, async (request, reply) => {
 
   const query = 'INSERT INTO urls (short, original, created_at) VALUES (?, ?, ?)';
 
-  const response = await cassandraClient.execute(query, [encode, url, new Date().toISOString()], { prepare: true });
+  await cassandraClient.execute(query, [encode, url, new Date().toISOString()], { prepare: true });
 
-  return reply.status(201).send({ response });
+  await redisClient.set(`originalURL:${url}`, `http://localhost:3000/${basePath}/shorten/${encode}`);
+
+  return reply.status(201).send({ shortUrl: `http://localhost:3000/${basePath}/shorten/${encode}` });
 });
 
-app.get(`${basePath}/shorten/:shortUrl`, async (request, reply) => {
+app.get(`/${basePath}/shorten/:shortUrl`, async (request, reply) => {
   const { shortUrl } = request.params as { shortUrl: string };
   
   const query = 'SELECT original FROM urls WHERE short = ? LIMIT 1';
   const response = await cassandraClient.execute(query, [shortUrl], { prepare: true });
 
-  return { original: response.rows[0].original };
+  return reply.status(302).redirect(response.rows[0]?.original);
 });
 
 export { app };

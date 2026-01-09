@@ -1,45 +1,12 @@
 # Encurtador de URLs — Documentação Técnica
 
-## API
-
-### Criar URL encurtada
-
-**POST** `/api/v1/shorten`
-
-**Request**
-
-```json
-{ "url": "https://www.example.com/..." }
-```
-
-**Response — 201**
-
-```json
-{ "short_url": "https://bit.ly/zn9e10A" }
-```
-
----
-
-### Redirecionar URL
-
-**GET** `/api/v1/shorten/{code}`
-
-**Response**
-
-* `301` ou `302`
-* Redireciona para a URL original
-
----
-
 ## Requisitos Funcionais
-
 * Gerar URL encurtada a partir de uma URL longa
 * Redirecionar URL encurtada para a URL original
 
 ---
 
 ## Requisitos Não Funcionais
-
 * Suportar **100 milhões de URLs/dia**
 * Alta disponibilidade (**24/7**)
 * Relação **1 write : 10 reads**
@@ -95,21 +62,9 @@ Total URLs = 100.000.000 × 365 × 10
 365B × 100 bytes ≈ 36,5 TB
 ```
 
-*(sem considerar índices e metadados)*
-
 ---
 
-## Banco de Dados
-
-### Requisitos
-
-* Escrita massiva
-* Leitura intensiva
-* Alta disponibilidade
-* Escala horizontal
-
-### Escolha
-
+# Banco de Dados
 **Apache Cassandra**
 
 ### Comandos:
@@ -155,8 +110,6 @@ Motivo: throughput alto, replicação nativa, retenção longa.
 
 ---
 
-## Design do Short Code
-
 ### Charset
 
 * 10 números
@@ -179,8 +132,6 @@ Motivo: throughput alto, replicação nativa, retenção longa.
 
 ---
 
-## Geração do Código
-
 ### Estratégia
 
 * Contador incremental global
@@ -200,10 +151,7 @@ https://bit.ly/2tx
 
 ---
 
-## Segurança
-
-### Ofuscação
-
+## Segurança (Hash + Ofuscação)
 * O ID sequencial **não deve ser exposto diretamente**
 * Aplicar:
 
@@ -228,10 +176,6 @@ Redis (INCR global / cache)
    ↓
 Cassandra
 ```
-
-* Redis: geração de IDs + cache de leitura
-* Banco acessado apenas em cache miss
-* API externa não necessária em runtime
 
 # Testes
 curl -X POST -H "Content-Type: application/json" -d '{"url": "https://github.com/AndrewReis"}' http://localhost:3000/api/v1/shorten && echo
