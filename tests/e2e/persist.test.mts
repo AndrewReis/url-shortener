@@ -3,7 +3,6 @@ import request from 'supertest';
 
 import { app } from '../../src/index.mts';
 
-
 describe('Create short URL', () => {
   beforeAll(async () => {
     await app.ready();
