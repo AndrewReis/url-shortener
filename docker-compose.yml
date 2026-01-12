@@ -5,18 +5,20 @@ networks:
 services:
   api:
     build: .
-    container_name: api-url_shortener
+    networks:
+      - k6
     ports:
       - "3333:3333"
     env_file:
       - .env
     depends_on:
-      - cassandra
-      - redis
+      cassandra:
+        condition: service_healthy
+      redis:
+        condition: service_started
 
   influxdb:
     image: influxdb:1.8
-    container_name: influxdb
     networks:
       - k6
       - grafana
@@ -27,7 +29,6 @@ services:
 
   grafana:
     image: grafana/grafana:8.5.21
-    container_name: grafana
     networks:
       - grafana
     ports:
@@ -38,7 +39,7 @@ services:
       - GF_AUTH_BASIC_ENABLED=false
       - GF_SERVER_SERVE_FROM_SUB_PATH=true
     volumes:
-      - ./observability:/var/lib/grafana/dashboards
+      - ./dashboards:/var/lib/grafana/dashboards
       - ./grafana-dashboard.yaml:/etc/grafana/provisioning/dashboards/dashboard.yaml
       - ./grafana-datasource.yaml:/etc/grafana/provisioning/datasources/datasource.yaml
 
@@ -55,9 +56,10 @@ services:
 
   cassandra:
     image: cassandra:4.1
-    container_name: cassandra
     ports:
       - "9042:9042"
+    networks:
+      - k6
     environment:
       CASSANDRA_CLUSTER_NAME: "url_shortener_cluster"
     volumes:
@@ -70,7 +72,6 @@ services:
 
   cassandra-init:
     image: cassandra:4.1
-    container_name: cassandra-init-script
     depends_on:
       cassandra:
         condition: service_healthy
@@ -81,7 +82,6 @@ services:
 
   redis:
     image: redis:8.4-alpine
-    container_name: redis
     restart: unless-stopped
     depends_on:
       - cassandra
