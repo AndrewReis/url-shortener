@@ -181,3 +181,21 @@ Cassandra
 curl -X POST -H "Content-Type: application/json" -d '{"url": "https://github.com/AndrewReis"}' http://localhost:3000/api/v1/shorten && echo
 
 curl -s http://localhost:3000/api/v1/shorten/7e20ABk && echo
+
+
+docker compose run --rm k6 run /scripts/k6.js
+
+
+## K6 + INFLUXDB + GRAFANA
+| Componente                      | Função              |
+| ------------------------------- | ------------------- |
+| Sua aplicação (Node, API, etc.) | Receber requisições |
+| k6                              | Simular usuários    |
+| InfluxDB                        | Armazenar métricas  |
+| Grafana                         | Visualizar métricas |
+
+
+
+# Referencias
+https://medium.com/swlh/beautiful-load-testing-with-k6-and-docker-compose-4454edb3a2e3
+
